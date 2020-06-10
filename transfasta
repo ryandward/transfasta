@@ -2,56 +2,111 @@
 use strict;
 use warnings;
 
-my %acid_of;
-{
-    my $raw = <<'***';
-TTT,TTC                   F #Phe
-TTA,TTG,CTT,CTC,CTA,CTG   L #Leu
-ATT,ATC,ATA               I #Ile
-ATG                       M #Met
-GTT,GTC,GTA,GTG           V #Val
-TCT,TCC,TCA,TCG           S #Ser
-CCT,CCC,CCA,CCG           P #Pro
-ACT,ACC,ACA,ACG           T #Thr
-GCT,GCC,GCA,GCG           A #Ala
-TAT,TAC                   Y #Tyr
-TAA,TAG                   * #Stop
-CAT,CAC                   H #His
-CAA,CAG                   Q #Gln
-AAT,AAC                   N #Asn
-AAA,AAG                   K #Lys
-GAT,GAC                   D #Asp
-GAA,GAG                   E #Glu
-TGT,TGC                   C #Cys
-TGA                       * #Stop
-TGG                       W #Trp
-CGT,CGC,CGA,CGG           R #Arg
-AGT,AGC                   S #Ser
-AGA,AGG                   R #Arg
-GGT,GGC,GGA,GGG           G #Gly
+my %start_table; {
+  my $start_blob = <<'***';
+  TTT,TTC                   * #Phe
+  TTA,CTT,CTC,CTA           * #Leu
+  ATT,ATC,ATA               * #Ile
+  ATG,CTG,GTG,TTG           M #Met
+  GTT,GTC,GTA               * #Val
+  TCT,TCC,TCA,TCG           * #Ser
+  CCT,CCC,CCA,CCG           * #Pro
+  ACT,ACC,ACA,ACG           * #Thr
+  GCT,GCC,GCA,GCG           * #Ala
+  TAT,TAC                   * #Tyr
+  TAA,TAG                   * #Stop
+  CAT,CAC                   * #His
+  CAA,CAG                   * #Gln
+  AAT,AAC                   * #Asn
+  AAA,AAG                   * #Lys
+  GAT,GAC                   * #Asp
+  GAA,GAG                   * #Glu
+  TGT,TGC                   * #Cys
+  TGA                       * #Stop
+  TGG                       * #Trp
+  CGT,CGC,CGA,CGG           * #Arg
+  AGT,AGC                   * #Ser
+  AGA,AGG                   * #Arg
+  GGT,GGC,GGA,GGG           * #Gly
+***
+for my $start (split /\n/, $start_blob) {
+    my ($start_codons, $start_AA) = split ' ', $start;
+    for my $start_codon (split /,/, $start_codons) {
+        $start_table{$start_codon} = $start_AA;
+    }
+}
+}
+
+my %codon_table; {
+  my $codon_blob = <<'***';
+    TTT,TTC                   F #Phe
+    TTA,TTG,CTT,CTC,CTA,CTG   L #Leu
+    ATT,ATC,ATA               I #Ile
+    ATG                       M #Met
+    GTT,GTC,GTA,GTG           V #Val
+    TCT,TCC,TCA,TCG           S #Ser
+    CCT,CCC,CCA,CCG           P #Pro
+    ACT,ACC,ACA,ACG           T #Thr
+    GCT,GCC,GCA,GCG           A #Ala
+    TAT,TAC                   Y #Tyr
+    TAA,TAG                   * #Stop
+    CAT,CAC                   H #His
+    CAA,CAG                   Q #Gln
+    AAT,AAC                   N #Asn
+    AAA,AAG                   K #Lys
+    GAT,GAC                   D #Asp
+    GAA,GAG                   E #Glu
+    TGT,TGC                   C #Cys
+    TGA                       * #Stop
+    TGG                       W #Trp
+    CGT,CGC,CGA,CGG           R #Arg
+    AGT,AGC                   S #Ser
+    AGA,AGG                   R #Arg
+    GGT,GGC,GGA,GGG           G #Gly
 ***
 
-    for my $line (split /\n/, $raw) {
-        my ($codons, $acid) = split ' ', $line;
+    for my $rest (split /\n/, $codon_blob) {
+        my ($codons, $AA) = split ' ', $rest;
         for my $codon (split /,/, $codons) {
-            $acid_of{$codon} = $acid;
+            $codon_table{$codon} = $AA;
         }
     }
 }
 
+my $start;
+my $rest;
+my $translated = 0;
+
 while (my $line = readline) {
-    next if $line !~ /\S/;
 
-    # my %count;
-    $line =~ s{\G([ACGT]{3})}{
-        my $acid = $acid_of{$1};
-        # $count{$acid}++;
-        $acid
-    }eg;
+    if ($line !~ /^([ACTG]{3})+?$/) {
+      $translated = 0;
+      next;
+    }
 
-#    for my $acid (sort keys %count) {
-  #      $line .= "$acid: $count{$acid}\n";
-    #}
-} continue {
+    $start = substr $line, 0, 3;
+    $rest = substr $line, 3;
+
+    $start =~ s/\G([ACGT]{3})/my $start_AA = $start_table{$1};/eg;
+
+    if( $start =~ /[*]/ ){
+      $translated = 0;
+      next;
+    }
+
+    else{
+      $translated = 1;
+      $rest =~ s/\G([ACGT]{3})/my $AA = $codon_table{$1};/eg;
+    }
+
+}
+
+continue {
+  if($translated == 1) {
+    $line = $start.$rest;
     print $line;
+  }
+    else {
+      print $line;
+    }
 }
